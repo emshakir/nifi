@@ -59,6 +59,7 @@ import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.processors.gcp.pubsub.publish.FlowFileResult;
 import org.apache.nifi.processors.gcp.pubsub.publish.MessageDerivationStrategy;
 import org.apache.nifi.processors.gcp.pubsub.publish.TrackedApiFutureCallback;
+import org.apache.nifi.processors.gcp.util.GoogleUtils;
 import org.apache.nifi.schema.access.SchemaNotFoundException;
 import org.apache.nifi.serialization.MalformedRecordException;
 import org.apache.nifi.serialization.RecordReader;
@@ -475,7 +476,7 @@ public class PublishGCPubSub extends AbstractGCPubSubWithProxyProcessor {
         final String endpoint = context.getProperty(API_ENDPOINT).getValue();
 
         final Publisher.Builder publisherBuilder = Publisher.newBuilder(getTopicName(context))
-                .setCredentialsProvider(FixedCredentialsProvider.create(getGoogleCredentials(context)))
+                .setCredentialsProvider(FixedCredentialsProvider.create(getGoogleCredentials(context).createScoped(GoogleUtils.GOOGLE_CLOUD_PLATFORM_SCOPE)))
                 .setChannelProvider(getTransportChannelProvider(context))
                 .setEndpoint(endpoint);
 

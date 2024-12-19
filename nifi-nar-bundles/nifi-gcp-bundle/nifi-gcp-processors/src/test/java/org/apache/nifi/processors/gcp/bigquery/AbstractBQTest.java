@@ -23,6 +23,7 @@ import com.google.cloud.bigquery.testing.RemoteBigQueryHelper;
 import org.apache.nifi.gcp.credentials.service.GCPCredentialsService;
 import org.apache.nifi.processor.Processor;
 import org.apache.nifi.processors.gcp.credentials.service.GCPCredentialsControllerService;
+import org.apache.nifi.processors.gcp.storage.AbstractGCSProcessor;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
 import org.junit.jupiter.api.Test;
@@ -76,11 +77,15 @@ public abstract class AbstractBQTest {
         final AbstractBigQueryProcessor processor = getProcessor();
         final GoogleCredentials mockCredentials = mock(GoogleCredentials.class);
 
+        final String overrideBigQueryApiUrl = "https://localhost/";
+        runner.setProperty(AbstractBigQueryProcessor.BIGQUERY_API_ENDPOINT_PRIVATE, overrideBigQueryApiUrl);
+
         final BigQueryOptions options = processor.getServiceOptions(runner.getProcessContext(),
                 mockCredentials);
 
         assertEquals(PROJECT_ID, options.getProjectId(), "Project IDs should match");
         assertEquals(RETRIES.intValue(), options.getRetrySettings().getMaxAttempts(), "Retry counts should match");
         assertSame(mockCredentials, options.getCredentials(), "Credentials should be configured correctly");
+        assertEquals(overrideBigQueryApiUrl, options.getHost(), "Host URLs should match");
     }
 }

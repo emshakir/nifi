@@ -18,11 +18,13 @@
 package org.apache.nifi.processors.gcp.bigquery;
 
 import com.google.api.gax.retrying.RetrySettings;
+import com.google.api.gax.rpc.FixedHeaderProvider;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.BaseServiceException;
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.cloud.bigquery.TableId;
+import com.google.common.collect.ImmutableMap;
 import org.apache.nifi.components.ConfigVerificationResult;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.ValidationContext;
@@ -66,6 +68,7 @@ public abstract class AbstractBigQueryProcessor extends AbstractGCPProcessor<Big
     public static final Set<Relationship> relationships = Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE)));
 
+
     public static final PropertyDescriptor DATASET = new PropertyDescriptor.Builder()
             .name(BigQueryAttributes.DATASET_ATTR)
             .displayName("Dataset")
@@ -95,6 +98,18 @@ public abstract class AbstractBigQueryProcessor extends AbstractGCPProcessor<Big
             .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
             .defaultValue("false")
             .build();
+    public static final String DEFAULT_BIGQUERY_ENDPOINT = "https://bigquery.googleapis.com/";
+
+    public static final PropertyDescriptor BIGQUERY_API_ENDPOINT_PRIVATE = new PropertyDescriptor.Builder()
+            .name("bigquery-api-endpoint-private")
+            .displayName("BigQuery API Endpoint")
+            .description("Can be used to override the default BigQuery endpoint. Default is "
+                    + DEFAULT_BIGQUERY_ENDPOINT + ". "
+                    + "Format must be https://hostname/")
+            .addValidator(StandardValidators.URL_VALIDATOR)
+            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+            .defaultValue(DEFAULT_BIGQUERY_ENDPOINT)
+            .build();
 
     @Override
     public Set<Relationship> getRelationships() {
@@ -108,6 +123,7 @@ public abstract class AbstractBigQueryProcessor extends AbstractGCPProcessor<Big
         descriptors.add(DATASET);
         descriptors.add(TABLE_NAME);
         descriptors.add(IGNORE_UNKNOWN);
+        descriptors.add(BIGQUERY_API_ENDPOINT_PRIVATE);
         return Collections.unmodifiableList(descriptors);
     }
 
@@ -115,11 +131,18 @@ public abstract class AbstractBigQueryProcessor extends AbstractGCPProcessor<Big
     protected BigQueryOptions getServiceOptions(ProcessContext context, GoogleCredentials credentials) {
         final String projectId = context.getProperty(PROJECT_ID).evaluateAttributeExpressions().getValue();
         final Integer retryCount = Integer.valueOf(context.getProperty(RETRY_COUNT).getValue());
+        final String bigQueryPrivate = context.getProperty(BIGQUERY_API_ENDPOINT_PRIVATE).evaluateAttributeExpressions().getValue();
 
         final BigQueryOptions.Builder builder = BigQueryOptions.newBuilder();
 
         if (!StringUtils.isBlank(projectId)) {
             builder.setProjectId(projectId);
+        }
+
+        if (!StringUtils.isBlank(bigQueryPrivate)) {
+            builder.setHost(bigQueryPrivate);
+            // https://codelabs.developers.google.com/cloudnet-psc#12
+            builder.setHeaderProvider(FixedHeaderProvider.create(ImmutableMap.of("Host", "www.googleapis.com")));
         }
 
         return builder.setCredentials(credentials)

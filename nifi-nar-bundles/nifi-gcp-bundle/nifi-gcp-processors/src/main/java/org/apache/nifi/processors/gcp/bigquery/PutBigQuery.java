@@ -62,6 +62,7 @@ import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.processors.gcp.bigquery.proto.ProtoUtils;
+import org.apache.nifi.processors.gcp.util.GoogleUtils;
 import org.apache.nifi.serialization.RecordReader;
 import org.apache.nifi.serialization.RecordReaderFactory;
 import org.apache.nifi.serialization.record.MapRecord;
@@ -131,7 +132,7 @@ public class PutBigQuery extends AbstractBigQueryProcessor {
     public static final PropertyDescriptor BIGQUERY_API_ENDPOINT = new PropertyDescriptor.Builder()
         .name("bigquery-api-endpoint")
         .displayName("BigQuery API Endpoint")
-        .description("Can be used to override the default BigQuery endpoint. Default is "
+        .description("Can be used to override the default BigQuery Storage API endpoint. Default is "
                 + BigQueryWriteStubSettings.getDefaultEndpoint() + ". "
                 + "Format must be hostname:port.")
         .addValidator(StandardValidators.HOSTNAME_PORT_LIST_VALIDATOR)
@@ -186,7 +187,8 @@ public class PutBigQuery extends AbstractBigQueryProcessor {
         TRANSFER_TYPE,
         APPEND_RECORD_COUNT,
         RETRY_COUNT,
-        SKIP_INVALID_ROWS
+        SKIP_INVALID_ROWS,
+            BIGQUERY_API_ENDPOINT_PRIVATE
     ).collect(collectingAndThen(toList(), Collections::unmodifiableList));
 
     @Override
@@ -419,7 +421,7 @@ public class PutBigQuery extends AbstractBigQueryProcessor {
 
         StreamWriter.Builder builder = StreamWriter.newBuilder(streamName);
         builder.setWriterSchema(protoSchema);
-        builder.setCredentialsProvider(FixedCredentialsProvider.create(credentials));
+        builder.setCredentialsProvider(FixedCredentialsProvider.create(credentials.createScoped(GoogleUtils.GOOGLE_CLOUD_PLATFORM_SCOPE)));
         builder.setEndpoint(endpoint);
 
         return builder.build();

@@ -47,6 +47,7 @@ import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
+import org.apache.nifi.processors.gcp.util.GoogleUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -272,7 +273,7 @@ public class ConsumeGCPubSub extends AbstractGCPubSubWithProxyProcessor {
         final String endpoint = context.getProperty(API_ENDPOINT).getValue();
 
         final SubscriberStubSettings.Builder subscriberBuilder = SubscriberStubSettings.newBuilder()
-                .setCredentialsProvider(FixedCredentialsProvider.create(getGoogleCredentials(context)))
+                .setCredentialsProvider(FixedCredentialsProvider.create(getGoogleCredentials(context).createScoped(GoogleUtils.GOOGLE_CLOUD_PLATFORM_SCOPE)))
                 .setTransportChannelProvider(getTransportChannelProvider(context))
                 .setEndpoint(endpoint);
 
